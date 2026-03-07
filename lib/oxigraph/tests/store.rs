@@ -159,7 +159,10 @@ fn test_load_graph_on_disk_with_options() -> Result<(), Box<dyn Error>> {
         &dir,
         StoreOptions::default()
             .with_max_open_files(128)
-            .with_fd_reserve(64),
+            .with_fd_reserve(64)
+            .with_write_buffer_size(8 * 1024 * 1024)
+            .with_max_write_buffer_number(2)
+            .with_block_cache_capacity(16 * 1024 * 1024),
     )?;
     store.load_from_reader(RdfFormat::Turtle, DATA.as_bytes())?;
     for q in quads(GraphNameRef::DefaultGraph) {
