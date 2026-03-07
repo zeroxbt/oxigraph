@@ -143,6 +143,7 @@ impl Db {
         db_options: DbOptions,
     ) -> Result<Self, StorageError> {
         let c_path = path_to_cstring(path)?;
+        let block_cache_capacity = db_options.block_cache_capacity;
         unsafe {
             let options = Self::db_options(db_options)?;
             rocksdb_options_set_create_if_missing(options, 1);
@@ -158,9 +159,18 @@ impl Db {
                 block_based_table_options,
                 16,
             );
-            if let Some(capacity) = db_options.block_cache_capacity {
+            if let Some(capacity) = block_cache_capacity {
                 let cache = rocksdb_cache_create_lru(capacity);
                 rocksdb_block_based_options_set_block_cache(block_based_table_options, cache);
+                rocksdb_cache_destroy(cache);
+                rocksdb_block_based_options_set_cache_index_and_filter_blocks(
+                    block_based_table_options,
+                    1,
+                );
+                rocksdb_block_based_options_set_pin_l0_filter_and_index_blocks_in_cache(
+                    block_based_table_options,
+                    1,
+                );
             }
             rocksdb_options_set_block_based_table_factory(options, block_based_table_options);
             #[cfg(feature = "rocksdb-debug")]
