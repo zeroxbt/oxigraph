@@ -46,6 +46,9 @@ pub struct ColumnFamilyDefinition {
 pub struct DbOptions {
     pub max_open_files: Option<i32>,
     pub fd_reserve: Option<u32>,
+    pub write_buffer_size: Option<usize>,
+    pub max_write_buffer_number: Option<i32>,
+    pub block_cache_capacity: Option<usize>,
 }
 
 #[derive(Clone)]
@@ -155,6 +158,10 @@ impl Db {
                 block_based_table_options,
                 16,
             );
+            if let Some(capacity) = db_options.block_cache_capacity {
+                let cache = rocksdb_cache_create_lru(capacity);
+                rocksdb_block_based_options_set_block_cache(block_based_table_options, cache);
+            }
             rocksdb_options_set_block_based_table_factory(options, block_based_table_options);
             #[cfg(feature = "rocksdb-debug")]
             {
@@ -322,6 +329,12 @@ impl Db {
             let options = rocksdb_options_create();
             assert!(!options.is_null(), "rocksdb_options_create returned null");
             rocksdb_options_optimize_level_style_compaction(options, 512 * 1024 * 1024);
+            if let Some(size) = db_options.write_buffer_size {
+                rocksdb_options_set_write_buffer_size(options, size);
+            }
+            if let Some(n) = db_options.max_write_buffer_number {
+                rocksdb_options_set_max_write_buffer_number(options, n);
+            }
             rocksdb_options_increase_parallelism(
                 options,
                 available_parallelism()?.get().try_into().unwrap(),

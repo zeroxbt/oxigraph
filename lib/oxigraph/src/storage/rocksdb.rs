@@ -52,6 +52,9 @@ const DEFAULT_CF: &str = "default";
 pub struct RocksDbStorageOptions {
     pub max_open_files: Option<i32>,
     pub fd_reserve: Option<u32>,
+    pub write_buffer_size: Option<usize>,
+    pub max_write_buffer_number: Option<i32>,
+    pub block_cache_capacity: Option<usize>,
 }
 
 impl From<RocksDbStorageOptions> for DbOptions {
@@ -59,6 +62,9 @@ impl From<RocksDbStorageOptions> for DbOptions {
         Self {
             max_open_files: value.max_open_files,
             fd_reserve: value.fd_reserve,
+            write_buffer_size: value.write_buffer_size,
+            max_write_buffer_number: value.max_write_buffer_number,
+            block_cache_capacity: value.block_cache_capacity,
         }
     }
 }

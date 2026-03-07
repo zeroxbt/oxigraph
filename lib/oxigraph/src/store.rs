@@ -111,6 +111,9 @@ pub struct Store {
 pub struct StoreOptions {
     max_open_files: Option<StoreMaxOpenFiles>,
     fd_reserve: Option<u32>,
+    write_buffer_size: Option<usize>,
+    max_write_buffer_number: Option<i32>,
+    block_cache_capacity: Option<usize>,
 }
 
 #[cfg(all(not(target_family = "wasm"), feature = "rocksdb"))]
@@ -147,6 +150,37 @@ impl StoreOptions {
         self.fd_reserve = Some(fd_reserve);
         self
     }
+
+    /// Sets the size of each memtable (write buffer) per column family.
+    ///
+    /// RocksDB's `optimize_level_style_compaction(512MB)` sets this to 128MB by default.
+    /// With 12 column families and up to 6 buffers each, this can use ~9.2GB.
+    /// Lowering this value reduces memory usage at the cost of more frequent flushes.
+    #[must_use]
+    pub fn with_write_buffer_size(mut self, size: usize) -> Self {
+        self.write_buffer_size = Some(size);
+        self
+    }
+
+    /// Sets the maximum number of memtables per column family before writes stall.
+    ///
+    /// RocksDB's `optimize_level_style_compaction` sets this to 6 by default.
+    /// Reducing this limits write buffer memory usage.
+    #[must_use]
+    pub fn with_max_write_buffer_number(mut self, n: i32) -> Self {
+        self.max_write_buffer_number = Some(n);
+        self
+    }
+
+    /// Sets the capacity of the shared LRU block cache used for reads.
+    ///
+    /// A single cache is shared across all column families.
+    /// By default RocksDB uses an 8MB per-CF cache.
+    #[must_use]
+    pub fn with_block_cache_capacity(mut self, capacity: usize) -> Self {
+        self.block_cache_capacity = Some(capacity);
+        self
+    }
 }
 
 #[cfg(all(not(target_family = "wasm"), feature = "rocksdb"))]
@@ -160,6 +194,9 @@ impl From<StoreOptions> for StorageOptions {
                     StoreMaxOpenFiles::Unlimited => -1,
                 }),
             value.fd_reserve,
+            value.write_buffer_size,
+            value.max_write_buffer_number,
+            value.block_cache_capacity,
         )
     }
 }
